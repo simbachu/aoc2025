@@ -6,10 +6,12 @@ import (
 	"strconv"
 
 	"aoc2025/day1"
+	"aoc2025/day2"
 )
 
 var days = map[int]Day{
 	1: day1.Day1{},
+	2: day2.Day2{},
 }
 
 func main() {
@@ -44,10 +46,10 @@ func main() {
 
 		fmt.Printf("Day %d:\n", dayNumber)
 		part1 := day.Part1(string(data))
-		fmt.Printf("  Part 1: %d\n", part1)
+		fmt.Printf("  Part 1: %v\n", part1)
 
 		if part2, unlocked := day.Part2(string(data)); unlocked {
-			fmt.Printf("  Part 2: %d\n", part2)
+			fmt.Printf("  Part 2: %v\n", part2)
 		} else {
 			fmt.Printf("  Part 2: Not yet unlocked\n")
 		}
