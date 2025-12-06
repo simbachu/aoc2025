@@ -10,6 +10,7 @@ import (
 	"aoc2025/day3"
 	"aoc2025/day4"
 	"aoc2025/day5"
+	"aoc2025/day6"
 )
 
 var days = map[int]Day{
@@ -18,6 +19,7 @@ var days = map[int]Day{
 	3: day3.Day3{},
 	4: day4.Day4{},
 	5: day5.Day5{},
+	6: day6.Day6{},
 }
 
 func main() {

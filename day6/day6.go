@@ -8,10 +8,10 @@ type mathProblem struct {
 }
 
 // make a math problem from a 2D grid of runes
-func makeMathProblem(raw [][]rune) mathProblem {
+func makeMathProblem(grid [][]rune) mathProblem {
 	operands := make([]int, 0)
 	operator := ' '
-	for _, row := range raw {
+	for _, row := range grid {
 		hasOperator := false
 		for _, cell := range row {
 			if cell == '+' || cell == '*' {
@@ -38,6 +38,73 @@ func makeMathProblem(raw [][]rune) mathProblem {
 		}
 		if hasDigits {
 			operands = append(operands, currentNumber)
+		}
+	}
+	if operator == ' ' {
+		panic("no operator in problem")
+	}
+	if len(operands) < 2 {
+		panic("invalid number of operands in problem")
+	}
+	return mathProblem{
+		operands: operands,
+		operator: operator,
+	}
+}
+
+// read the grid right-to-left columnar, so
+//
+// 123
+//  45
+//   6
+// *
+//
+// should read as 356 * 24 * 1
+func makeMathProblemColumnar(grid [][]rune) mathProblem {
+	if len(grid) == 0 {
+		panic("empty grid")
+	}
+	maxWidth := 0
+	for _, row := range grid {
+		if len(row) > maxWidth {
+			maxWidth = len(row)
+		}
+	}
+
+	operands := make([]int, 0)
+	operator := ' '
+	// iterate columns from right to left
+	for col := maxWidth - 1; col >= 0; col-- {
+		// collect digits from top to bottom in this column
+		digits := make([]int, 0)
+		foundOperator := false
+		for row := 0; row < len(grid); row++ {
+			if col >= len(grid[row]) {
+				continue
+			}
+			cell := grid[row][col]
+			if cell >= '0' && cell <= '9' {
+				digits = append(digits, int(cell-'0'))
+			} else if cell == '+' || cell == '*' {
+				if operator != ' ' {
+					panic("multiple operators in a column")
+				}
+				operator = cell
+				foundOperator = true
+				break
+			} else if cell != ' ' {
+				panic("invalid character in problem")
+			}
+		}
+		if len(digits) > 0 {
+			currentNumber := 0
+			for _, digit := range digits {
+				currentNumber = currentNumber*10 + digit
+			}
+			operands = append(operands, currentNumber)
+		}
+		if foundOperator {
+			break
 		}
 	}
 	if operator == ' ' {
@@ -90,22 +157,14 @@ func makeMathProblemRaw(input [][]rune) mathProblemRaw {
 	}
 }
 
-// input is in this format:
-// 123 328  51 64
-//
-//	45 64  387 23
-//	 6 98  215 314
-//
-// *   +   *   +
-// problems are arranged horizontally, separated by columns of spaces
-// return a list of raw math problems; might make more sense to return constructed actual problems
-func ReadInput(input string) []mathProblemRaw {
+func parseStringToRawProblems(input string) []mathProblemRaw {
 	lineStrings := strings.Split(input, "\n")
 	lines := make([][]rune, 0)
 	maxWidth := 0
 
 	for _, lineStr := range lineStrings {
-		lineStr = strings.TrimRight(lineStr, " \r")
+		// only trim carriage returns, preserve all spaces for columnar reading
+		lineStr = strings.TrimRight(lineStr, "\r")
 		if len(lineStr) == 0 {
 			continue
 		}
@@ -120,23 +179,23 @@ func ReadInput(input string) []mathProblemRaw {
 		return []mathProblemRaw{}
 	}
 
-	for i := range lines {
-		for len(lines[i]) < maxWidth {
-			lines[i] = append(lines[i], ' ')
-		}
-	}
-
-	// find the spaces between problems
+	// find the spaces between problems (using maxWidth to check all possible columns)
+	// a column is a boundary if it's all spaces in all rows that have that column
 	isBoundaryColumn := make([]bool, maxWidth)
 	for col := 0; col < maxWidth; col++ {
 		allSpaces := true
+		hasAnyContent := false
 		for row := 0; row < len(lines); row++ {
-			if lines[row][col] != ' ' {
-				allSpaces = false
-				break
+			if col < len(lines[row]) {
+				hasAnyContent = true
+				if lines[row][col] != ' ' {
+					allSpaces = false
+					break
+				}
 			}
 		}
-		isBoundaryColumn[col] = allSpaces
+		// only consider it a boundary if there's content and it's all spaces
+		isBoundaryColumn[col] = hasAnyContent && allSpaces
 	}
 
 	// extract problems
@@ -150,10 +209,19 @@ func ReadInput(input string) []mathProblemRaw {
 			}
 		} else {
 			if startCol != -1 {
+				problemWidth := col - startCol
 				problemGrid := make([][]rune, len(lines))
 				for row := 0; row < len(lines); row++ {
-					problemGrid[row] = make([]rune, col-startCol)
-					copy(problemGrid[row], lines[row][startCol:col])
+					problemGrid[row] = make([]rune, problemWidth)
+					// copy what exists, pad with spaces if row is shorter
+					for c := 0; c < problemWidth; c++ {
+						srcCol := startCol + c
+						if srcCol < len(lines[row]) {
+							problemGrid[row][c] = lines[row][srcCol]
+						} else {
+							problemGrid[row][c] = ' '
+						}
+					}
 				}
 				rawProblems = append(rawProblems, makeMathProblemRaw(problemGrid))
 				startCol = -1
@@ -162,10 +230,19 @@ func ReadInput(input string) []mathProblemRaw {
 	}
 
 	if startCol != -1 {
+		problemWidth := maxWidth - startCol
 		problemGrid := make([][]rune, len(lines))
 		for row := 0; row < len(lines); row++ {
-			problemGrid[row] = make([]rune, maxWidth-startCol)
-			copy(problemGrid[row], lines[row][startCol:maxWidth])
+			problemGrid[row] = make([]rune, problemWidth)
+			// copy what exists, pad with spaces if row is shorter
+			for c := 0; c < problemWidth; c++ {
+				srcCol := startCol + c
+				if srcCol < len(lines[row]) {
+					problemGrid[row][c] = lines[row][srcCol]
+				} else {
+					problemGrid[row][c] = ' '
+				}
+			}
 		}
 		rawProblems = append(rawProblems, makeMathProblemRaw(problemGrid))
 	}
@@ -173,16 +250,47 @@ func ReadInput(input string) []mathProblemRaw {
 	return rawProblems
 }
 
+// input is in this format:
+// 123 328  51 64
+//
+//	45 64  387 23
+//	 6 98  215 314
+//
+// *   +   *   +
+// problems are arranged horizontally, separated by columns of spaces
+// return a list of raw math problems; might make more sense to return constructed actual problems
+func ReadInput(input string, columnar bool) []mathProblem {
+	rawProblems := parseStringToRawProblems(input)
+	problems := make([]mathProblem, 0)
+	// if columnar, add in reverse order
+	if columnar {
+		for i := len(rawProblems) - 1; i >= 0; i-- {
+			problems = append(problems, makeMathProblemColumnar(rawProblems[i].grid))
+		}
+	} else {
+		for _, rawProblem := range rawProblems {
+			problems = append(problems, makeMathProblem(rawProblem.grid))
+		}
+	}
+	return problems
+}
+
 func SolveDay6Part1(input string) int {
-	problems := ReadInput(input)
+	problems := ReadInput(input, false)
 	total := 0
 	for _, problem := range problems {
-		answer := makeMathProblem(problem.grid).Solve()
+		answer := problem.Solve()
 		total += answer
 	}
 	return total
 }
 
 func SolveDay6Part2(input string) int {
-	return 0
+	problems := ReadInput(input, true)
+	total := 0
+	for _, problem := range problems {
+		answer := problem.Solve()
+		total += answer
+	}
+	return total
 }
