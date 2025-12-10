@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"aoc2025/day1"
+	"aoc2025/day10"
 	"aoc2025/day2"
 	"aoc2025/day3"
 	"aoc2025/day4"
@@ -17,15 +18,16 @@ import (
 )
 
 var days = map[int]Day{
-	1: day1.Day1{},
-	2: day2.Day2{},
-	3: day3.Day3{},
-	4: day4.Day4{},
-	5: day5.Day5{},
-	6: day6.Day6{},
-	7: day7.Day7{},
-	8: day8.Day8{},
-	9: day9.Day9{},
+	1:  day1.Day1{},
+	2:  day2.Day2{},
+	3:  day3.Day3{},
+	4:  day4.Day4{},
+	5:  day5.Day5{},
+	6:  day6.Day6{},
+	7:  day7.Day7{},
+	8:  day8.Day8{},
+	9:  day9.Day9{},
+	10: day10.Day10{},
 }
 
 func main() {
