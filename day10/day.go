@@ -7,5 +7,5 @@ func (d Day10) Part1(input string) interface{} {
 }
 
 func (d Day10) Part2(input string) (interface{}, bool) {
-	return SolveDay10Part2(input), false
+	return SolveDay10Part2(input), true
 }

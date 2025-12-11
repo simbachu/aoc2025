@@ -19,7 +19,7 @@ const sampleInput = `[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}
 `
 const sampleOutPutPart1 = 7
-const sampleOutPutPart2 = 0
+const sampleOutPutPart2 = 33
 
 func TestReadInput(t *testing.T) {
 	t.Run("Sample Input", func(t *testing.T) {
@@ -49,8 +49,8 @@ func TestReadInput(t *testing.T) {
 			if len(machine.Buttons) != exp.buttons {
 				t.Errorf("Machine %d: Expected %d buttons, got %d", i+1, exp.buttons, len(machine.Buttons))
 			}
-			if len(machine.Joltage) != exp.joltages {
-				t.Errorf("Machine %d: Expected %d joltages, got %d", i+1, exp.joltages, len(machine.Joltage))
+			if len(machine.Joltages) != exp.joltages {
+				t.Errorf("Machine %d: Expected %d joltages, got %d", i+1, exp.joltages, len(machine.Joltages))
 			}
 		}
 	})
@@ -227,30 +227,6 @@ func TestCheckConsistency(t *testing.T) {
 	}
 }
 
-func TestBackSubstitution(t *testing.T) {
-	augmentedMatrix := [][]bool{
-		{true, true, true},
-		{false, true, false},
-	}
-
-	vector, success := backSubstitution(augmentedMatrix, 2, 2)
-
-	if !success {
-		t.Fatal("Expected success, got failure")
-	}
-
-	expected := []bool{true, false}
-	if len(vector) != len(expected) {
-		t.Fatalf("Expected length %d, got %d", len(expected), len(vector))
-	}
-
-	for i, exp := range expected {
-		if vector[i] != exp {
-			t.Errorf("Index %d: Expected %t, got %t", i, exp, vector[i])
-		}
-	}
-}
-
 func TestFindFreeVariables(t *testing.T) {
 	machines := ReadInput(sampleInput)
 
@@ -358,5 +334,68 @@ func TestSolveDay10Part2(t *testing.T) {
 	result := SolveDay10Part2(sampleInput)
 	if result != sampleOutPutPart2 {
 		t.Errorf("Expected %d, got %d", sampleOutPutPart2, result)
+	}
+}
+
+func TestSolvableSolve(t *testing.T) {
+	tests := []struct {
+		name          string
+		solvable      Solvable
+		shouldSucceed bool
+		description   string
+	}{
+		{
+			name: "Simple solvable system",
+			solvable: Solvable{
+				Workspace: []int{0, 0},
+				Goal:      []int{2, 3},
+				Buttons: []Button{
+					{0},
+					{1},
+				},
+			},
+			shouldSucceed: true,
+			description:   "Each button affects one position",
+		},
+		{
+			name: "System with overlapping buttons",
+			solvable: Solvable{
+				Workspace: []int{0, 0},
+				Goal:      []int{3, 4},
+				Buttons: []Button{
+					{0, 1},
+					{1},
+				},
+			},
+			shouldSucceed: true,
+			description:   "Overlapping buttons",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vector, success := tt.solvable.Solve()
+			if success != tt.shouldSucceed {
+				t.Errorf("%s: Expected success=%t, got %t", tt.description, tt.shouldSucceed, success)
+				return
+			}
+			if success {
+				testWorkspace := make([]int, len(tt.solvable.Workspace))
+				copy(testWorkspace, tt.solvable.Workspace)
+				for i, presses := range vector {
+					for j := 0; j < presses; j++ {
+						for _, indicator := range tt.solvable.Buttons[i] {
+							testWorkspace[indicator]++
+						}
+					}
+				}
+				for i, goal := range tt.solvable.Goal {
+					if testWorkspace[i] != goal {
+						t.Errorf("%s: Position %d: Expected %d, got %d. Solution: %v",
+							tt.description, i, goal, testWorkspace[i], vector)
+					}
+				}
+			}
+		})
 	}
 }
